@@ -1,46 +1,91 @@
-const express = require('express');
-const app = express();
-const PORT = process.env.PORT || 3000;
+require('dotenv').config();
 
-// Middleware to parse incoming JSON requests
-app.use(express.json());
+const { MongoClient, ServerApiVersion } = require('mongodb');
 
-// Basic route for the root URL
-app.get('/', (req, res) => {
-    res.send('Welcome to the Basic REST API!');
+const uri = process.env.MONGODB_URI;
+
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+	serverApi: {
+		version: ServerApiVersion.v1,
+		strict: true,
+		deprecationErrors: true,
+	},
 });
 
-// Example GET route
-app.get('/api/items', (req, res) => {
-    const items = [
-        { id: 1, name: 'Item One' },
-        { id: 2, name: 'Item Two' }
-    ];
-    res.json(items);
-});
+async function run() {
+	try {
+		await client.connect();
+		console.log('Connected to MongoDB');
+		await createDocument();
+		await readDocument();
+		await updateDocument();
+		await deleteDocument();
+	} finally {
+		await client.close();
+	}
+}
+run().catch(console.dir);
 
-// Example POST route
-app.post('/api/items', (req, res) => {
-    const newItem = req.body;  // Get data from request body
-    newItem.id = Date.now();  // Assign a unique ID
-    res.status(201).json(newItem);  // Send the new item back in the response
-});
+// createDocument function
+async function createDocument() {
+	try {
+		const database = client.db('docs');
+		const collection = database.collection('users');
 
-// Example PUT route
-app.put('/api/items/:id', (req, res) => {
-    const { id } = req.params;
-    const updatedItem = req.body;
-    updatedItem.id = id;
-    res.json(updatedItem);
-});
+		const doc = { name: 'John Doe', age: 30, job: 'Software Developer' };
+		const result = await collection.insertOne(doc);
 
-// Example DELETE route
-app.delete('/api/items/:id', (req, res) => {
-    const { id } = req.params;
-    res.json({ message: `Item with ID ${id} deleted` });
-});
+		console.log(`Document inserted with _id: ${result.insertedId}`);
+	} catch (error) {
+		console.error('Error in createDocument: ', error);
+	}
+}
 
-// Start the server
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+// readDocument function
+async function readDocument() {
+	try {
+		const database = client.db('docs');
+		const collection = database.collection('users');
+
+		const query = { name: 'John Doe', age: 30, job: 'Software Developer' };
+		const result = await collection.find(query).toArray();
+
+		console.log('Document return with:', result);
+	} catch (error) {
+		console.error('Error in reading document: ', error);
+	}
+}
+
+//updateDocument function
+async function updateDocument() {
+	try {
+		const database = client.db('docs');
+		const collection = database.collection('users');
+
+		const query = { name: 'John Doe', age: 30, job: 'Software Developer' };
+		const update = { $set: { job: 'CEO' } };
+		//db.collection.updateOne()
+
+		const result = await collection.updateOne(query, update);
+
+		console.log(`${result.modifiedCount} document(s) updated`);
+	} catch (error) {
+		console.error('Unable to find entity for updating ', error);
+	}
+}
+
+//deleteDocument function
+async function deleteDocument() {
+	try {
+		const database = client.db('docs');
+		const collection = database.collection('users');
+
+		const query = { name: 'John Doe', age: 30, job: 'CEO' };
+		const result = await collection.deleteOne(query);
+
+		console.log(`${result.deletedCount} document(s) deleted`);
+	} catch (error) {
+		console.error('Unable to delete entity ', error);
+	}
+}
