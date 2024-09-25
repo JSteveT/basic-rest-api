@@ -4,7 +4,6 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 
 const uri = process.env.MONGODB_URI;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
 	serverApi: {
 		version: ServerApiVersion.v1,
@@ -17,22 +16,27 @@ async function run() {
 	try {
 		await client.connect();
 		console.log('Connected to MongoDB');
-		await createDocument();
-		await readDocument();
-		await updateDocument();
-		await deleteDocument();
+
+		const database = client.db('docs');
+		const collection = database.collection('users');
+
+		await createDocument(collection);
+		await readDocument(collection);
+		await updateDocument(collection);
+		await deleteDocument(collection);
+	} catch (err) {
+		console.error('Error during execution: ', err);
 	} finally {
 		await client.close();
 	}
 }
-run().catch(console.dir);
+run().catch((err) => {
+	console.error('Error connecting to MongoDB: ', err);
+});
 
 // createDocument function
-async function createDocument() {
+async function createDocument(collection) {
 	try {
-		const database = client.db('docs');
-		const collection = database.collection('users');
-
 		const doc = { name: 'John Doe', age: 30, job: 'Software Developer' };
 		const result = await collection.insertOne(doc);
 
@@ -43,31 +47,28 @@ async function createDocument() {
 }
 
 // readDocument function
-async function readDocument() {
+async function readDocument(collection) {
 	try {
-		const database = client.db('docs');
-		const collection = database.collection('users');
-
-		const query = { name: 'John Doe', age: 30, job: 'Software Developer' };
+		const query = { name: 'John Doe' };
 		const result = await collection.find(query).toArray();
 
-		console.log('Document return with:', result);
+		if (result.length === 0) {
+			console.log('No document found with the given query.');
+		} else {
+			console.log('Documents found:', result);
+		}
 	} catch (error) {
 		console.error('Error in reading document: ', error);
 	}
 }
 
-//updateDocument function
-async function updateDocument() {
+// updateDocument function
+async function updateDocument(collection) {
 	try {
-		const database = client.db('docs');
-		const collection = database.collection('users');
-
-		const query = { name: 'John Doe', age: 30, job: 'Software Developer' };
+		const filterQuery = { name: 'John Doe' };
 		const update = { $set: { job: 'CEO' } };
-		//db.collection.updateOne()
 
-		const result = await collection.updateOne(query, update);
+		const result = await collection.updateOne(filterQuery, update);
 
 		console.log(`${result.modifiedCount} document(s) updated`);
 	} catch (error) {
@@ -75,14 +76,11 @@ async function updateDocument() {
 	}
 }
 
-//deleteDocument function
-async function deleteDocument() {
+// deleteDocument function
+async function deleteDocument(collection) {
 	try {
-		const database = client.db('docs');
-		const collection = database.collection('users');
-
-		const query = { name: 'John Doe', age: 30, job: 'CEO' };
-		const result = await collection.deleteOne(query);
+		const filterQuery = { name: 'John Doe', job: 'CEO' };
+		const result = await collection.deleteOne(filterQuery);
 
 		console.log(`${result.deletedCount} document(s) deleted`);
 	} catch (error) {
